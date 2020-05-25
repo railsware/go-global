@@ -32,8 +32,9 @@ func LoadConfigFromParameterStore(session *session.Session, paramPrefix string, 
 
 	awsErr := client.GetParametersByPathPages(
 		&ssm.GetParametersByPathInput{
-			Path:      aws.String(paramPrefix),
-			Recursive: aws.Bool(true),
+			Path:           aws.String(paramPrefix),
+			Recursive:      aws.Bool(true),
+			WithDecryption: aws.Bool(true),
 		},
 		func(page *ssm.GetParametersByPathOutput, lastPage bool) bool {
 			for _, param := range page.Parameters {
