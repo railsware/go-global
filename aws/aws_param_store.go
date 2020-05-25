@@ -88,14 +88,14 @@ func writeParamToConfig(config interface{}, name string, value string) global.Er
 	pathParts := strings.Split(name, paramStoreSeparator)
 	for _, part := range pathParts {
 		if destination.Kind() != reflect.Struct {
-			return global.NewWarning("could not map param type to config field: %s", name)
+			return global.NewWarning("could not map param to config field: %s", name)
 		}
 		destination = lookupFieldByName(destination, part)
 	}
 
 	// assign value to field
 	if !destination.IsValid() {
-		return global.NewWarning("could not map param type to config field: %s", name)
+		return global.NewWarning("could not map param to config field: %s", name)
 	} else if !destination.CanSet() {
 		return global.NewWarning("config key is not writable: %s", name)
 	} else if destination.Kind() == reflect.String {
@@ -124,7 +124,7 @@ func writeParamToConfig(config interface{}, name string, value string) global.Er
 
 func lookupFieldByName(structure reflect.Value, name string) reflect.Value {
 	fieldByName := structure.FieldByName(name)
-	if !fieldByName.IsValid() {
+	if fieldByName.IsValid() {
 		return fieldByName
 	}
 
