@@ -74,13 +74,13 @@ func LoadConfigFromParameterStore(session *session.Session, paramPrefix string, 
 func writeParamToConfig(config interface{}, name string, value string) global.Error {
 	destination := reflect.ValueOf(config)
 
-	if destination.Kind() == reflect.Ptr {
+	if destination.Kind() != reflect.Ptr {
 		return global.NewError("config must be a pointer to a structure")
 	}
 
 	destination = destination.Elem()
 
-	if destination.Kind() == reflect.Struct {
+	if destination.Kind() != reflect.Struct {
 		return global.NewError("config must be a pointer to a structure")
 	}
 
