@@ -80,7 +80,7 @@ func writeParamToConfig(config interface{}, name string, value string) global.Er
 		if destination.Kind() != reflect.Struct {
 			return global.NewWarning("could not map param type to config field: %s", name)
 		}
-		destination = destination.FieldByName(part)
+		destination = lookupFieldByName(destination, part)
 	}
 
 	// assign value to field
