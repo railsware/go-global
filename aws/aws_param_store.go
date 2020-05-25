@@ -72,7 +72,17 @@ func LoadConfigFromParameterStore(session *session.Session, paramPrefix string, 
 }
 
 func writeParamToConfig(config interface{}, name string, value string) global.Error {
-	destination := reflect.ValueOf(config).Elem()
+	destination := reflect.ValueOf(config)
+
+	if destination.Kind() == reflect.Ptr {
+		return global.NewError("config must be a pointer to a structure")
+	}
+
+	destination = destination.Elem()
+
+	if destination.Kind() == reflect.Struct {
+		return global.NewError("config must be a pointer to a structure")
+	}
 
 	// find nested field in config struct
 	pathParts := strings.Split(name, paramStoreSeparator)

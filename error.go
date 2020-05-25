@@ -21,9 +21,9 @@ func (g globalError) Warning() bool {
 }
 
 func NewWarning(msg string, arguments ...interface{}) Error {
-	return globalError{fmt.Sprintf(msg, arguments...), true}
+	return &globalError{fmt.Sprintf(msg, arguments...), true}
 }
 
 func NewError(msg string, arguments ...interface{}) Error {
-	return globalError{fmt.Sprintf(msg, arguments...), false}
+	return &globalError{fmt.Sprintf(msg, arguments...), false}
 }
