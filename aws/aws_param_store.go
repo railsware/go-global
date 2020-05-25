@@ -52,11 +52,11 @@ func LoadConfigFromParameterStore(session *session.Session, paramPrefix string, 
 		})
 
 	if paramError != nil {
-		return global.NewError("global: %v", err)
+		return global.NewError("global: %v", paramError)
 	}
 
 	if awsErr != nil {
-		return global.NewError("global: failed to load from Parameter Store: %v", err)
+		return global.NewError("global: failed to load from Parameter Store: %v", awsErr)
 	}
 
 	if paramWarnings != nil {
