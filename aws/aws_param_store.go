@@ -81,17 +81,40 @@ func writeParamToConfig(config interface{}, name string, value string) global.Er
 
 	destination = destination.Elem()
 
-	if destination.Kind() != reflect.Struct {
-		return global.NewError("config must be a pointer to a structure")
+	if destination.Kind() != reflect.Struct && destination.Kind() != reflect.Array {
+		return global.NewError("config must be a pointer to a structure or array")
 	}
 
 	// find nested field in config struct
 	pathParts := strings.Split(name, paramStoreSeparator)
 	for _, part := range pathParts {
-		if destination.Kind() != reflect.Struct {
+		if destination.Kind() == reflect.Struct {
+			destination = lookupFieldByName(destination, part)
+		} else if destination.Kind() == reflect.Slice {
+			index, err := strconv.Atoi(part)
+			if err != nil || index < 0 {
+				return global.NewWarning("could not map param to array index: %s", name)
+			}
+			if destination.Cap() <= index {
+				// grow destination array to match
+				destination.SetLen(destination.Cap())
+				additionalLength := index - destination.Cap() + 1
+				additionalElements := reflect.MakeSlice(destination.Type(), additionalLength, additionalLength)
+				destination.Set(reflect.AppendSlice(destination, additionalElements))
+			} else if destination.Len() <= index {
+				destination.SetLen(index + 1)
+			}
+			destination = destination.Index(index)
+		} else {
 			return global.NewWarning("could not map param to config field: %s", name)
 		}
-		destination = lookupFieldByName(destination, part)
+		// resolve pointer, if struct was nil
+		if destination.Kind() == reflect.Ptr {
+			if destination.IsNil() {
+				destination.Set(reflect.New(destination.Type().Elem()))
+			}
+			destination = destination.Elem()
+		}
 	}
 
 	// assign value to field
@@ -117,7 +140,7 @@ func writeParamToConfig(config interface{}, name string, value string) global.Er
 			return global.NewWarning("cannot read bool param value (must be true or false): %s", name)
 		}
 	} else {
-		return global.NewWarning("cannot write param: config key is of unsupported type %s: %s", destination.Kind, name)
+		return global.NewWarning("cannot write param: config key is of unsupported type %s: %s", destination.Kind(), name)
 	}
 
 	return nil
