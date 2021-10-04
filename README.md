@@ -19,9 +19,10 @@ import (
 
 type Config struct {
   Database struct {
-   URL string `json:"url"`
     PoolSize int `json:"pool_size"`
+    URLs []string `json:"urls"`
   } `json:"database"`
+
 }
 
 var config Config
@@ -31,8 +32,14 @@ awsParamPrefix := os.Getenv("AWS_PARAM_PREFIX")
 
 err := globalAWS.LoadConfigFromParameterStore(awsSession, awsParamPrefix, &config)
 
-// config.Database.URL loaded from /param_prefix/database/url
+// config.Database.URLs[0] loaded from /param_prefix/database/urls/0
 // config.Database.PoolSize loaded from /param_prefix/database/pool_size
 ```
 
 Supported value types: `string`, `int`, `bool` ("true"/"false").
+
+Complex type should be either a `struct`, or a `slice`. You can arbitrarily nest structs and slices.
+
+For structs, use `global` or `json` tag to set field name.
+
+For slices, all subscripts in Parameter Store must be integers.
