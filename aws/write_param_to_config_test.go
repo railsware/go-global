@@ -49,7 +49,9 @@ func TestWriteParamToConfig(t *testing.T) {
 	}
 
 	for _, param := range parameters {
-		err := writeParamToConfig(&config, param.name, param.value)
+		destination, err := findParamDestination(&config, param.name)
+		assert.Nil(t, err, "Failed to find param destination: %v", err)
+		err = writeParamToConfig(destination, param.value)
 		assert.Nil(t, err, "Failed to write param: %v", err)
 	}
 
