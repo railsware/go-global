@@ -30,7 +30,11 @@ var config Config
 awsSession := session.Must(session.NewSession())
 awsParamPrefix := os.Getenv("AWS_PARAM_PREFIX")
 
-err := globalAWS.LoadConfigFromParameterStore(awsSession, awsParamPrefix, &config)
+err := globalAWS.LoadConfigFromParameterStore(
+  awsSession,
+  globalAWS.LoadConfigOptions{ParamPrefix: awsParamPrefix},
+  &config
+)
 
 // config.Database.URLs[0] loaded from /param_prefix/database/urls/0
 // config.Database.PoolSize loaded from /param_prefix/database/pool_size
@@ -43,3 +47,11 @@ Complex type should be either a `struct`, or a `slice`. You can arbitrarily nest
 For structs, use `global` or `json` tag to set field name.
 
 For slices, all subscripts in Parameter Store must be integers.
+
+### Handling unmapped params
+
+By default, Global assumes that all params from Parameter Store must be mapped to config fields, and returns a warning if some param does not correspond to a config field.
+
+Sometimes, it is expected that the config only contains a subset of the params, and such a warning is unnecessary.
+
+In this case, set `options.IgnoreUnmappedParams` to true. Note that other mapping issues, like a type mismatch, will still cause an error.
