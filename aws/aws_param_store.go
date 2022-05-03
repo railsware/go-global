@@ -1,13 +1,13 @@
 package aws
 
 import (
+	"context"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/railsware/go-global"
 )
 
@@ -23,7 +23,7 @@ type LoadConfigOptions struct {
 // config must be a pointer to a struct.
 // Keys in ParamStore must be separated with slashes.
 // They are matched to struct fields by: name, `global:` tag, or `json:` tag
-func LoadConfigFromParameterStore(session *session.Session, options LoadConfigOptions, config interface{}) (err global.Error) {
+func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOptions, globalConfig interface{}) (err global.Error) {
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			err = global.NewError("global: panic while loading from parameter store: %v", panicErr)
@@ -31,50 +31,44 @@ func LoadConfigFromParameterStore(session *session.Session, options LoadConfigOp
 		}
 	}()
 
-	client := ssm.New(session)
-
-	var paramWarnings []global.Error
-	var paramError global.Error
-
-	awsErr := client.GetParametersByPathPages(
+	paramPaginator := ssm.NewGetParametersByPathPaginator(
+		ssm.NewFromConfig(awsConfig),
 		&ssm.GetParametersByPathInput{
 			Path:           aws.String(options.ParamPrefix),
-			Recursive:      aws.Bool(true),
-			WithDecryption: aws.Bool(true),
+			Recursive:      true,
+			WithDecryption: true,
 		},
-		func(page *ssm.GetParametersByPathOutput, lastPage bool) bool {
-			for _, param := range page.Parameters {
-				paramNameWithoutPrefix := (*param.Name)[len(options.ParamPrefix):]
-				destination, err := findParamDestination(config, paramNameWithoutPrefix)
-				if err != nil {
-					if !err.Warning() {
-						paramError = global.NewError("%s: %v", paramNameWithoutPrefix, err)
-						return false
-					} else if !options.IgnoreUnmappedParams {
-						paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
-					}
-					continue
-				}
+	)
 
-				err = writeParamToConfig(destination, *param.Value)
-				if err != nil {
-					if err.Warning() {
-						paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
-					} else {
-						paramError = err
-						return false
-					}
+	var paramWarnings []global.Error
+
+	for paramPaginator.HasMorePages() {
+		page, err := paramPaginator.NextPage(context.Background())
+		if err != nil {
+			return global.NewError("global: failed to load from Parameter Store: %v", err)
+		}
+
+		for _, param := range page.Parameters {
+			paramNameWithoutPrefix := (*param.Name)[len(options.ParamPrefix):]
+			destination, err := findParamDestination(globalConfig, paramNameWithoutPrefix)
+			if err != nil {
+				if !err.Warning() {
+					return global.NewError("global: %s: %v", paramNameWithoutPrefix, err)
+				} else if !options.IgnoreUnmappedParams {
+					paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
+				}
+				continue
+			}
+
+			err = writeParamToConfig(destination, *param.Value)
+			if err != nil {
+				if err.Warning() {
+					paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
+				} else {
+					return global.NewError("global: %v", err)
 				}
 			}
-			return true
-		})
-
-	if paramError != nil {
-		return global.NewError("global: %v", paramError)
-	}
-
-	if awsErr != nil {
-		return global.NewError("global: failed to load from Parameter Store: %v", awsErr)
+		}
 	}
 
 	if paramWarnings != nil {
@@ -89,8 +83,8 @@ func LoadConfigFromParameterStore(session *session.Session, options LoadConfigOp
 	return nil
 }
 
-func findParamDestination(config interface{}, name string) (reflect.Value, global.Error) {
-	destination := reflect.ValueOf(config)
+func findParamDestination(globalConfig interface{}, name string) (reflect.Value, global.Error) {
+	destination := reflect.ValueOf(globalConfig)
 
 	if destination.Kind() != reflect.Ptr {
 		return reflect.Value{}, global.NewError("config must be a pointer to a structure")
