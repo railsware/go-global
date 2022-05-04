@@ -1,4 +1,4 @@
-module github.com/railsware/go-global
+module github.com/railsware/go-global/v2
 
 go 1.17
 
