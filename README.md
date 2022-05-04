@@ -7,14 +7,14 @@ This repository contains modules to load configuration analogous to the [Global 
 See [main Global documentation](https://github.com/railsware/global#aws-parameter-store-1) for setup instructions.
 
 ```sh
-go get github.com/railsware/go-global/aws
+go get github.com/railsware/go-global/v2/aws
 ```
 
 ```go
 import (
   "os"
-  "github.com/aws/aws-sdk-go/aws/session"
-  globalAWS "github.com/railsware/go-global/aws"
+  awsConfig "github.com/aws/aws-sdk-go-v2/config"
+  globalAWS "github.com/railsware/go-global/v2/aws"
 )
 
 type Config struct {
@@ -27,11 +27,14 @@ type Config struct {
 
 var config Config
 
-awsSession := session.Must(session.NewSession())
+awsConfig, err := awsConfig.LoadDefaultConfig(context.TODO())
+if err != nil {
+  log.Fatalf("cannot load aws config: %v", err)
+}
 awsParamPrefix := os.Getenv("AWS_PARAM_PREFIX")
 
 err := globalAWS.LoadConfigFromParameterStore(
-  awsSession,
+  awsConfig,
   globalAWS.LoadConfigOptions{ParamPrefix: awsParamPrefix},
   &config
 )
