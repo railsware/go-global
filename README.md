@@ -51,6 +51,21 @@ For structs, use `global` or `json` tag to set field name.
 
 For slices, all subscripts in Parameter Store must be integers.
 
+### Shorthand for running on AWS ECS or Lambda
+
+If you use Global in AWS environments, you can DRY up the code by following a convention:
+
+- Set up param prefix in the `AWS_PARAM_PREFIX` environment variable.
+- Make sure the IAM role has permissions to the params
+
+Then you can simply use:
+
+```go
+var config Config
+// Will panic if anything goes wrong
+globalAWS.MustLoadConfig(&config)
+```
+
 ### Handling unmapped params
 
 By default, Global assumes that all params from Parameter Store must be mapped to config fields, and returns a warning if some param does not correspond to a config field.
