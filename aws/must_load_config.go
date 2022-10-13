@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"reflect"
-
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"os"
 )
 
 // MustLoadConfig is a conventional method for loading the config during initialization.
@@ -17,10 +15,6 @@ import (
 // - panics if anything goes wrong
 // The suggested application is in the initialization of an AWS ECS service or Lambda function.
 func MustLoadConfig(config interface{}) {
-	if reflect.ValueOf(config).Kind() != reflect.Ptr {
-		panic(errors.New("paramstore.MustLoadConfig: must pass pointer to the config struct"))
-	}
-
 	awsConfig, err := awsConfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		panic(fmt.Errorf("paramstore.MustLoadConfig: Cannot load AWS config: %v", err))

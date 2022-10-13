@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -19,18 +20,11 @@ type LoadConfigOptions struct {
 	IgnoreUnmappedParams bool
 }
 
-// LoadConfigFromParameterStore retrieves keys configured in ParamStore and writes to config
+// LoadConfigFromParameterStore retrieves keys configured in ParamStore and writes to config.
 // config must be a pointer to a struct.
 // Keys in ParamStore must be separated with slashes.
 // They are matched to struct fields by: name, `global:` tag, or `json:` tag
-func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOptions, globalConfig interface{}) (err global.Error) {
-	defer func() {
-		if panicErr := recover(); panicErr != nil {
-			err = global.NewError("global: panic while loading from parameter store: %v", panicErr)
-			return
-		}
-	}()
-
+func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOptions, globalConfig interface{}) global.Error {
 	paramPaginator := ssm.NewGetParametersByPathPaginator(
 		ssm.NewFromConfig(awsConfig),
 		&ssm.GetParametersByPathInput{
@@ -39,146 +33,160 @@ func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOption
 			WithDecryption: true,
 		},
 	)
+	return LoadConfigFromParamPaginator(paramPaginator, options, globalConfig)
+}
 
-	var paramWarnings []global.Error
+/*
+ParamPaginator is an interface for aws ssm.ParamPaginator or mock implementation for unit tests
+*/
+type ParamPaginator interface {
+	HasMorePages() bool
+	NextPage(ctx context.Context, optFns ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error)
+}
 
-	for paramPaginator.HasMorePages() {
-		page, err := paramPaginator.NextPage(context.Background())
+func LoadConfigFromParamPaginator(p ParamPaginator, options LoadConfigOptions, globalConfig interface{}) (err global.Error) {
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			err = global.NewError("global: panic while loading config: %v, trace - %s", panicErr, debug.Stack())
+			return
+		}
+	}()
+	destination := reflect.ValueOf(globalConfig)
+	if destination.Kind() != reflect.Ptr {
+		return global.NewError("config must be a pointer to a structure")
+	}
+	if destination.Elem().Kind() != reflect.Struct {
+		return global.NewError("config must be a pointer to a structure")
+	}
+	params := map[string]string{}
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.Background())
 		if err != nil {
 			return global.NewError("global: failed to load from Parameter Store: %v", err)
 		}
-
 		for _, param := range page.Parameters {
-			paramNameWithoutPrefix := (*param.Name)[len(options.ParamPrefix):]
-			destination, err := findParamDestination(globalConfig, paramNameWithoutPrefix)
-			if err != nil {
-				if !err.Warning() {
-					return global.NewError("global: %s: %v", paramNameWithoutPrefix, err)
-				} else if !options.IgnoreUnmappedParams {
-					paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
-				}
-				continue
-			}
-
-			err = writeParamToConfig(destination, *param.Value)
-			if err != nil {
-				if err.Warning() {
-					paramWarnings = append(paramWarnings, global.NewWarning("%s: %v", paramNameWithoutPrefix, err))
-				} else {
-					return global.NewError("global: %v", err)
-				}
-			}
+			params[aws.ToString(param.Name)[len(options.ParamPrefix):]] = aws.ToString(param.Value)
 		}
 	}
-
-	if paramWarnings != nil {
-		var warningMessages []string
-		for _, warning := range paramWarnings {
-			warningMessages = append(warningMessages, warning.Error())
-		}
-
-		return global.NewWarning("global: failed to read some parameters: %s", strings.Join(warningMessages, "; "))
+	if err = populateParamsToConfig("", params, destination); err != nil && !options.IgnoreUnmappedParams {
+		return err
 	}
-
 	return nil
 }
 
-func findParamDestination(globalConfig interface{}, name string) (reflect.Value, global.Error) {
-	destination := reflect.ValueOf(globalConfig)
-
-	if destination.Kind() != reflect.Ptr {
-		return reflect.Value{}, global.NewError("config must be a pointer to a structure")
-	}
-
-	destination = destination.Elem()
-
-	if destination.Kind() != reflect.Struct && destination.Kind() != reflect.Array {
-		return reflect.Value{}, global.NewError("config must be a pointer to a structure or array")
-	}
-
-	// find nested field in config struct
-	pathParts := strings.Split(name, paramStoreSeparator)
-	for _, part := range pathParts {
-		if destination.Kind() == reflect.Struct {
-			destination = lookupFieldByName(destination, part)
-		} else if destination.Kind() == reflect.Slice {
-			index, err := strconv.Atoi(part)
-			if err != nil || index < 0 {
-				return reflect.Value{}, global.NewWarning("could not map param to array index")
-			}
-			if destination.Cap() <= index {
-				// grow destination array to match
-				destination.SetLen(destination.Cap())
-				additionalLength := index - destination.Cap() + 1
-				additionalElements := reflect.MakeSlice(destination.Type(), additionalLength, additionalLength)
-				destination.Set(reflect.AppendSlice(destination, additionalElements))
-			} else if destination.Len() <= index {
-				destination.SetLen(index + 1)
-			}
-			destination = destination.Index(index)
-		} else {
-			return reflect.Value{}, global.NewWarning("could not map param to config field")
+func populateParamsToConfig(prefix string, params map[string]string, destination reflect.Value) global.Error {
+	destinationElem := destination.Elem()
+	var warnings []string
+	for i := 0; i < destinationElem.NumField(); i++ {
+		field := destinationElem.Field(i)
+		fieldType := destinationElem.Type().Field(i)
+		tag := fieldType.Tag.Get("global")
+		if tag == "" {
+			tag = fieldType.Tag.Get("json")
 		}
-		// resolve pointer, if struct was nil
-		if destination.Kind() == reflect.Ptr {
-			if destination.IsNil() {
-				destination.Set(reflect.New(destination.Type().Elem()))
+		if tag == "" {
+			tag = fieldType.Name
+		}
+		key := strings.Join([]string{prefix, tag}, paramStoreSeparator)
+		if field.Kind() == reflect.Struct {
+			if err := populateParamsToConfig(key, params, field.Addr()); err != nil {
+				warnings = append(warnings, "failed to populate params for group "+key+". error - "+err.Error())
 			}
-			destination = destination.Elem()
+			continue
+		}
+		value := params[key]
+		if err := writeParamToConfig(key, field, value, params); err != nil {
+			warnings = append(warnings, "failed to populate params for key "+key+". error - "+err.Error())
+			continue
 		}
 	}
-
-	// assign value to field
-	if !destination.IsValid() {
-		return reflect.Value{}, global.NewWarning("could not map param to config field")
+	if len(warnings) != 0 {
+		return global.NewWarning("global: failed to read some parameters: %s", strings.Join(warnings, "; "))
 	}
-
-	return destination, nil
+	return nil
 }
 
-func writeParamToConfig(destination reflect.Value, value string) global.Error {
+func writeParamToConfig(key string, destination reflect.Value, value string, params map[string]string) global.Error {
 	if !destination.CanSet() {
 		return global.NewWarning("config key is not writable")
-	} else if destination.Kind() == reflect.String {
+	}
+	if destination.Kind() == reflect.Ptr {
+		if destination.IsNil() {
+			destination.Set(reflect.New(destination.Type().Elem()))
+		}
+		destination = destination.Elem()
+	}
+	switch destination.Kind() {
+	case reflect.String:
 		destination.SetString(value)
-	} else if destination.Kind() == reflect.Int {
-		intval, err := strconv.Atoi(value)
+	case reflect.Bool:
+		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
-			return global.NewWarning("cannot read int param value")
-		} else {
-			destination.SetInt(int64(intval))
+			return global.NewWarning("cannot read bool param value (must be true or false). value - %s, err - %s", value, err)
 		}
-	} else if destination.Kind() == reflect.Bool {
-		if value == "true" {
-			destination.SetBool(true)
-		} else if value == "false" {
-			destination.SetBool(false)
-		} else {
-			return global.NewWarning("cannot read bool param value (must be true or false)")
+		destination.SetBool(boolValue)
+	case reflect.Int:
+		intValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return global.NewWarning("cannot read int param value: value - %s, err - %s", value, err)
 		}
-	} else {
+		destination.SetInt(intValue)
+	case reflect.Slice:
+		// case with slice configured in param store with multiple paths like */0/* */1/*
+		if value == "" {
+			return loadMultiKeysSlice(key, destination, params)
+		}
+		if destination.Type().Elem().Kind() != reflect.String {
+			return global.NewWarning("slice config destination supported only for slice of strings")
+		}
+		values := strings.Split(value, ",")
+		destination.Set(reflect.ValueOf(values))
+	default:
 		return global.NewWarning("cannot write param: config key is of unsupported type %s", destination.Kind())
 	}
-
 	return nil
 }
 
-func lookupFieldByName(structure reflect.Value, name string) reflect.Value {
-	fieldByName := structure.FieldByName(name)
-	if fieldByName.IsValid() {
-		return fieldByName
-	}
-
-	// TODO might be inefficient, but fine for one-time loading of a not-crazy-big config
-	for i := 0; i < structure.NumField(); i++ {
-		fieldTag := structure.Type().Field(i).Tag
-		if fieldTag.Get("global") == name {
-			return structure.Field(i)
+func loadMultiKeysSlice(key string, destination reflect.Value, params map[string]string) global.Error {
+	var length int
+	indexesMap := map[string]bool{}
+	for paramKey := range params {
+		if !strings.HasPrefix(paramKey, key) {
+			continue
 		}
-		if fieldTag.Get("json") == name {
-			return structure.Field(i)
+		index := strings.Split(strings.TrimPrefix(paramKey, key+"/"), "/")[0]
+		_, ok := indexesMap[index]
+		if ok {
+			continue
+		}
+		indexesMap[index] = true
+		length++
+	}
+	var messages []string
+	elements := reflect.MakeSlice(destination.Type(), length, length)
+	destination.Set(elements)
+	for i := 0; i < length; i++ {
+		paramKey := strings.Join([]string{key, strconv.Itoa(i)}, "/")
+		elem := destination.Index(i)
+		if elem.Kind() == reflect.Ptr {
+			if elem.IsNil() {
+				elem.Set(reflect.New(elem.Type().Elem()))
+			}
+			elem = elem.Elem()
+		}
+		switch elem.Kind() {
+		case reflect.String:
+			elem.SetString(params[paramKey])
+		case reflect.Struct:
+			if err := populateParamsToConfig(paramKey, params, elem.Addr()); err != nil {
+				return err
+			}
+		default:
+			messages = append(messages, "failed to populate key - "+key+", wrong elem kind - "+destination.Type().Elem().Kind().String())
 		}
 	}
-
-	return reflect.Value{}
+	if len(messages) != 0 {
+		return global.NewWarning(strings.Join(messages, "; "))
+	}
+	return nil
 }
