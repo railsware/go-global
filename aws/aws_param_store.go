@@ -35,8 +35,8 @@ func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOption
 		ssm.NewFromConfig(awsConfig),
 		&ssm.GetParametersByPathInput{
 			Path:           aws.String(options.ParamPrefix),
-			Recursive:      true,
-			WithDecryption: true,
+			Recursive:      aws.Bool(true),
+			WithDecryption: aws.Bool(true),
 		},
 	)
 
