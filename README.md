@@ -45,9 +45,11 @@ err := globalAWS.LoadConfigFromParameterStore(
 
 Supported value types: `string`, `int`, `bool` ("true"/"false").
 
-Complex type should be either a `struct`, or a `slice`. You can arbitrarily nest structs and slices.
+Complex type should be either a `struct`, a `map` or a `slice`. You can arbitrarily nest them.
 
 For structs, use `global` or `json` tag to set field name.
+
+For maps, the key name is the map key (maps must use strings as keys.)
 
 For slices, all subscripts in Parameter Store must be integers.
 
