@@ -60,7 +60,13 @@ func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOption
 
 	errors := paramTree.Write(reflectedConfig)
 
-	return errors.Join()
+	joinedError := errors.Join()
+
+	if joinedError.Warning() && options.IgnoreUnmappedParams {
+		return nil
+	}
+
+	return joinedError
 }
 
 type param struct {
