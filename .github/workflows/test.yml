@@ -12,7 +12,13 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.19
+          go-version: "1.20"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+          args: --timeout 2m0s
 
       - name: Test
         run: make test

@@ -6,28 +6,32 @@ import (
 	"strconv"
 )
 
-func (leaf Node) writeLeafValue(destination reflect.Value) WriteErrors {
+func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors {
 	if !destination.CanSet() {
-		return newWriteErrors("value is not writable", false)
-	} else if destination.Kind() == reflect.String {
-		destination.SetString(leaf.Value)
-	} else if destination.Kind() == reflect.Int {
-		intval, err := strconv.Atoi(leaf.Value)
+		return newWriteErrors("value is not writable")
+	}
+
+	switch destination.Kind() { //nolint:exhaustive // we don't cover all types
+	case reflect.String:
+		destination.SetString(paramTree.Value)
+	case reflect.Int:
+		intval, err := strconv.Atoi(paramTree.Value)
 		if err != nil {
-			return newWriteErrors("cannot read int param value", false)
-		} else {
-			destination.SetInt(int64(intval))
+			return newWriteErrors("cannot read int param value")
 		}
-	} else if destination.Kind() == reflect.Bool {
-		if leaf.Value == "true" {
+		destination.SetInt(int64(intval))
+	case reflect.Bool:
+		switch paramTree.Value {
+		case "true":
 			destination.SetBool(true)
-		} else if leaf.Value == "false" {
+		case "false":
 			destination.SetBool(false)
-		} else {
-			return newWriteErrors("cannot read bool param value (must be true or false)", false)
+		default:
+			return newWriteErrors("cannot read bool param value (must be true or false)")
 		}
-	} else {
-		return newWriteErrors(fmt.Sprintf("cannot write param: config key is of unsupported type %s", destination.Kind()), false)
+	default:
+		err := fmt.Sprintf("cannot write param: config key is of unsupported type %s", destination.Kind())
+		return newWriteErrors(err)
 	}
 
 	return WriteErrors{}

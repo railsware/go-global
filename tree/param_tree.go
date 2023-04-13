@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-// One node of the parameter tree
+// One node of the parameter tree.
 type Node struct {
 	Value    string
 	Children map[string]*Node
@@ -29,7 +29,7 @@ func (paramTree Node) Write(destination reflect.Value) WriteErrors {
 		destination = destination.Elem()
 	}
 
-	switch destination.Kind() {
+	switch destination.Kind() { //nolint:exhaustive // not covering all possible types
 	case reflect.Struct:
 		errors.merge(paramTree.writeIntoStruct(destination))
 	case reflect.Map:

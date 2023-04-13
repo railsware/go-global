@@ -8,6 +8,7 @@ import (
 )
 
 func TestAllKindsOfErrors(t *testing.T) {
+	t.Parallel()
 
 	tree := &Node{
 		Children: map[string]*Node{
@@ -96,6 +97,8 @@ func TestAllKindsOfErrors(t *testing.T) {
 }
 
 func TestJoinWarnings(t *testing.T) {
+	t.Parallel()
+
 	warnings := WriteErrors{
 		errors: []writeError{
 			{
@@ -118,6 +121,8 @@ func TestJoinWarnings(t *testing.T) {
 }
 
 func TestJoinErrors(t *testing.T) {
+	t.Parallel()
+
 	errors := WriteErrors{
 		errors: []writeError{
 			{

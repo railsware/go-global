@@ -17,8 +17,8 @@ type WriteErrors struct {
 	errors []writeError
 }
 
-func newWriteErrors(msg string, isPathError bool) WriteErrors {
-	return WriteErrors{[]writeError{{msg: msg, isPathError: isPathError}}}
+func newWriteErrors(msg string) WriteErrors {
+	return WriteErrors{[]writeError{{msg: msg, isPathError: false}}}
 }
 
 func (we *WriteErrors) Present() bool {
@@ -45,7 +45,7 @@ func (we *WriteErrors) mergeChildErrors(childName string, childErrors WriteError
 }
 
 func (we *WriteErrors) Join() global.Error {
-	var msgs []string
+	msgs := make([]string, 0, len(we.errors))
 	isWarning := true
 	for _, err := range we.errors {
 		msg := fmt.Sprintf("%s: %s", err.path, err.msg)
@@ -59,7 +59,7 @@ func (we *WriteErrors) Join() global.Error {
 
 	if isWarning {
 		return global.NewWarning(msg)
-	} else {
-		return global.NewError(msg)
 	}
+
+	return global.NewError(msg)
 }

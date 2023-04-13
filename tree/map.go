@@ -6,7 +6,7 @@ import (
 
 func (paramTree Node) writeIntoMap(destination reflect.Value) WriteErrors {
 	if destination.Type().Key().Kind() != reflect.String {
-		return newWriteErrors("can only write to maps with string keys", false)
+		return newWriteErrors("can only write to maps with string keys")
 	}
 	var errors WriteErrors
 	if destination.Type().Elem().Kind() == reflect.Ptr {

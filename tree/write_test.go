@@ -29,6 +29,7 @@ type testStructType struct {
 }
 
 func TestWrite(t *testing.T) {
+	t.Parallel()
 
 	var testStruct testStructType
 
@@ -305,5 +306,4 @@ func TestWrite(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedMergedStruct, testStruct, "merging changes works correctly")
-
 }
