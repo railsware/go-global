@@ -1,0 +1,38 @@
+linters:
+  enable-all: true
+  disable:
+    # not very convenient
+    - exhaustruct
+
+    # not sure about this
+    - ireturn
+
+    # not following this one
+    - testpackage
+
+    # don't like the extra blank lines
+    - wsl
+    - nlreturn
+
+    # deprecated linters
+    - ifshort
+    - exhaustivestruct
+    - golint
+    - maligned
+    - scopelint
+    - interfacer
+    - varcheck
+    - structcheck
+    - nosnakecase
+    - deadcode
+linters-settings:
+  tagliatelle:
+    case:
+      rules:
+        json: snake
+
+issues:
+  exclude-rules:
+    - path: (.+)_test.go
+      linters:
+        - funlen

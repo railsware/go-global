@@ -23,14 +23,14 @@ func lookupFieldByName(structure reflect.Value, name string) reflect.Value {
 		return fieldByName
 	}
 
-	// TODO might be inefficient, but fine for one-time loading of a not-crazy-big config
-	for i := 0; i < structure.NumField(); i++ {
-		fieldTag := structure.Type().Field(i).Tag
+	// This might be inefficient, but fine for one-time loading of a not-crazy-big config
+	for fieldIndex := 0; fieldIndex < structure.NumField(); fieldIndex++ {
+		fieldTag := structure.Type().Field(fieldIndex).Tag
 		if fieldTag.Get("global") == name {
-			return structure.Field(i)
+			return structure.Field(fieldIndex)
 		}
 		if fieldTag.Get("json") == name {
-			return structure.Field(i)
+			return structure.Field(fieldIndex)
 		}
 	}
 

@@ -8,6 +8,8 @@ import (
 )
 
 func TestBuildTree(t *testing.T) {
+	t.Parallel()
+
 	params := []param{
 		{"String", "string"},
 		{"NestedSimple/Nested", "nested_string"},

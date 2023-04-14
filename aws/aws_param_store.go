@@ -9,19 +9,21 @@ import (
 	"github.com/railsware/go-global/v2/utils"
 )
 
-const paramStoreSeparator = "/"
-
 type LoadConfigOptions struct {
 	ParamPrefix string
 	// If IgnoreUnmappedParams is set, a parameter with no matching config field will be silently ignored.
 	IgnoreUnmappedParams bool
 }
 
-// LoadConfigFromParameterStore retrieves keys configured in ParamStore and writes to config
-// config must be a pointer to a struct.
-// Keys in ParamStore must be separated with slashes.
-// They are matched to struct fields by: name, `global:` tag, or `json:` tag
-func LoadConfigFromParameterStore(awsConfig aws.Config, options LoadConfigOptions, globalConfig interface{}) (err global.Error) {
+// LoadConfigFromParameterStore retrieves keys configured in ParamStore and writes to config.
+//   - config must be a pointer to a struct.
+//   - Keys in ParamStore must be separated with slashes.
+//     They are matched to struct fields by: name, `global:` tag, or `json:` tag
+func LoadConfigFromParameterStore( //nolint:nonamedreturns // false positive, using named return for defer
+	awsConfig aws.Config,
+	options LoadConfigOptions,
+	globalConfig interface{},
+) (err global.Error) {
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			err = global.NewError("global: panic while loading from parameter store: %v", panicErr)
