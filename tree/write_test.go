@@ -11,6 +11,9 @@ import (
 type testStructType struct {
 	Str            string                     `json:"str"`
 	Int            int                        `global:"int"`
+	Int32          int32                      `json:"int32"`
+	Uint           uint16                     `json:"uint"`
+	Float          float64                    `global:"float"`
 	Bool           bool                       `json:"bool"`
 	StrMap         map[string]string          `json:"strmap"`
 	StrSlice       []string                   `json:"strslice"`
@@ -24,20 +27,24 @@ type testStructType struct {
 	SliceOfMap     []map[string]string        `json:"sliceofmap"`
 	MapOfSlice     map[string][]string        `json:"mapofslice"`
 	// Fields just for testing errors
-	Float  float64        `global:"float"`
-	BadMap map[int]string `json:"badmap"`
+	Complex64 complex64      `global:"complex"`
+	BadMap    map[int]string `json:"badmap"`
 }
 
-func TestWrite(t *testing.T) {
+// TODO: maybe split the test into atomic parts so it's not so hard to review
+func TestWrite(t *testing.T) { //nolint:maintidx
 	t.Parallel()
 
 	var testStruct testStructType
 
 	tree := &Node{
 		Children: map[string]*Node{
-			"Str":  {Value: "foo"},
-			"int":  {Value: "123"},
-			"bool": {Value: "true"},
+			"Str":   {Value: "foo"},
+			"int":   {Value: "123"},
+			"int32": {Value: "65536"},
+			"uint":  {Value: "10"},
+			"float": {Value: "1.23"},
+			"bool":  {Value: "true"},
 			"intmap": {
 				Children: map[string]*Node{
 					"foo": {Value: "123"},
@@ -129,9 +136,12 @@ func TestWrite(t *testing.T) {
 	require.False(t, errors.Present())
 
 	expectedStruct := testStructType{
-		Str:  "foo",
-		Int:  123,
-		Bool: true,
+		Str:   "foo",
+		Int:   123,
+		Int32: 65536,
+		Uint:  10,
+		Float: 1.23,
+		Bool:  true,
 		IntMap: map[string]int{
 			"foo": 123,
 			"bar": 456,
@@ -265,9 +275,12 @@ func TestWrite(t *testing.T) {
 	require.False(t, errors.Present())
 
 	expectedMergedStruct := testStructType{
-		Str:  "bar",
-		Int:  456,
-		Bool: false,
+		Str:   "bar",
+		Int:   456,
+		Int32: 65536,
+		Uint:  10,
+		Float: 1.23,
+		Bool:  false,
 		IntMap: map[string]int{
 			"foo": 123,
 			"bar": 4560,
