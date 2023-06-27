@@ -12,10 +12,12 @@ func TestAllKindsOfErrors(t *testing.T) {
 
 	tree := &Node{
 		Children: map[string]*Node{
-			"Str":   {Value: "foo"},
-			"int":   {Value: "not an int"},
-			"float": {Value: "1.23"},
-			"bool":  {Value: "yes"},
+			"Str":     {Value: "foo"},
+			"int":     {Value: "not an int"},
+			"int32":   {Value: "1000000000000"},
+			"uint":    {Value: "-1"},
+			"complex": {Value: "unsupported type"},
+			"bool":    {Value: "yes"},
 			"intmap": {
 				Children: map[string]*Node{
 					"foo": {Value: "bad int"},
@@ -47,7 +49,7 @@ func TestAllKindsOfErrors(t *testing.T) {
 
 	expectedErrors := []writeError{
 		{
-			msg:         "cannot read int param value",
+			msg:         `cannot read int param value: strconv.ParseInt: parsing "not an int": invalid syntax`,
 			path:        "int",
 			isPathError: false,
 		},
@@ -57,17 +59,27 @@ func TestAllKindsOfErrors(t *testing.T) {
 			isPathError: false,
 		},
 		{
-			msg:         "cannot write param: config key is of unsupported type float64",
-			path:        "float",
+			msg:         `cannot read int32 param value: strconv.ParseInt: parsing "1000000000000": value out of range`,
+			path:        "int32",
 			isPathError: false,
 		},
 		{
-			msg:         "cannot read int param value",
+			msg:         `cannot read uint16 param value: strconv.ParseUint: parsing "-1": invalid syntax`,
+			path:        "uint",
+			isPathError: false,
+		},
+		{
+			msg:         "cannot write param: config key is of unsupported type complex64",
+			path:        "complex",
+			isPathError: false,
+		},
+		{
+			msg:         `cannot read int param value: strconv.ParseInt: parsing "bad int": invalid syntax`,
 			path:        "intmap/foo",
 			isPathError: false,
 		},
 		{
-			msg:         "cannot read int param value",
+			msg:         `cannot read int param value: strconv.ParseInt: parsing "bad int": invalid syntax`,
 			path:        "intslice/0",
 			isPathError: false,
 		},

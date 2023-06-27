@@ -1,6 +1,10 @@
 linters:
   enable-all: true
   disable:
+    # anarchy in the comments section
+    - godox
+    - godot
+
     # not very convenient
     - exhaustruct
 
