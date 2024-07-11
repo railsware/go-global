@@ -18,17 +18,12 @@ linters:
     - wsl
     - nlreturn
 
+    # not relevant
+    - depguard
+
     # deprecated linters
-    - ifshort
-    - exhaustivestruct
-    - golint
-    - maligned
-    - scopelint
-    - interfacer
-    - varcheck
-    - structcheck
-    - nosnakecase
-    - deadcode
+    - gomnd
+    - execinquery
 linters-settings:
   tagliatelle:
     case:

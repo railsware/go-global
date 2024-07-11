@@ -55,7 +55,7 @@ func (we *WriteErrors) Join() global.Error {
 		}
 	}
 
-	msg := fmt.Sprintf("global: %s", strings.Join(msgs, ", "))
+	msg := "global: " + strings.Join(msgs, ", ")
 
 	if isWarning {
 		return global.NewWarning(msg)
