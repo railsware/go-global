@@ -58,6 +58,10 @@ func LoadConfigFromParameterStore( //nolint:nonamedreturns // false positive, us
 		}
 	}
 
+	if len(params) == 0 {
+		return global.NewWarning("global: no parameters in Parameter Store with prefix \"%s\"", options.ParamPrefix)
+	}
+
 	paramTree := buildParamTree(params)
 
 	errors := paramTree.Write(reflectedConfig)
