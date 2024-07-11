@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors {
+func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors { //nolint:cyclop
 	if !destination.CanSet() {
 		return newWriteErrors("value is not writable")
 	}
@@ -23,6 +23,12 @@ func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors {
 		return writeFloat(paramTree.Value, destination)
 	case reflect.Bool:
 		return writeBool(paramTree.Value, destination)
+	case reflect.Struct:
+		return newWriteErrors("cannot write param: destination should be a primitive type, not a struct")
+	case reflect.Map:
+		return newWriteErrors("cannot write param: destination should be a primitive type, not a map")
+	case reflect.Slice:
+		return newWriteErrors("cannot write param: destination should be a primitive type, not a slice")
 	default:
 		err := fmt.Sprintf("cannot write param: config key is of unsupported type %s", destination.Kind())
 		return newWriteErrors(err)

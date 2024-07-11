@@ -20,6 +20,7 @@ type testStructType struct {
 	IntMap         map[string]int             `json:"intmap"`
 	IntSlice       []int                      `json:"intslice"`
 	Nested         *testStructType            `json:"nested"`
+	AnotherNested  nestedType                 `json:"another_nested"`
 	NestedMap      map[string]testStructType  `json:"nmap"`
 	NestedMapPtr   map[string]*testStructType `json:"nmapptr"`
 	NestedSlice    []testStructType           `json:"nslice"`
@@ -29,6 +30,10 @@ type testStructType struct {
 	// Fields just for testing errors
 	Complex64 complex64      `global:"complex"`
 	BadMap    map[int]string `json:"badmap"`
+}
+
+type nestedType struct {
+	NestedField string `json:"nested_field"`
 }
 
 // TODO: maybe split the test into atomic parts so it's not so hard to review
@@ -73,6 +78,11 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 			"nested": {
 				Children: map[string]*Node{
 					"str": {Value: "nested_foo"},
+				},
+			},
+			"another_nested": {
+				Children: map[string]*Node{
+					"nested_field": {Value: "nested_without_pointer"},
 				},
 			},
 			"nmap": {
@@ -150,9 +160,10 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 			"foo": "bar",
 			"baz": "qux",
 		},
-		IntSlice: []int{12, 34},
-		StrSlice: []string{"foo", "", "bar"},
-		Nested:   &testStructType{Str: "nested_foo"},
+		IntSlice:      []int{12, 34},
+		StrSlice:      []string{"foo", "", "bar"},
+		Nested:        &testStructType{Str: "nested_foo"},
+		AnotherNested: nestedType{NestedField: "nested_without_pointer"},
 		NestedMap: map[string]testStructType{
 			"foo": {
 				Str: "nested_foo_in_map",
@@ -291,9 +302,10 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 			"baz": "bam",
 			"zip": "zap",
 		},
-		IntSlice: []int{56, 34, 90},
-		StrSlice: []string{"foo", "baz", "bar"},
-		Nested:   &testStructType{Str: "nested_foo", Int: 1234},
+		IntSlice:      []int{56, 34, 90},
+		StrSlice:      []string{"foo", "baz", "bar"},
+		Nested:        &testStructType{Str: "nested_foo", Int: 1234},
+		AnotherNested: nestedType{NestedField: "nested_without_pointer"},
 		NestedMap: map[string]testStructType{
 			"foo": {
 				Str: "nested_foo_in_map",

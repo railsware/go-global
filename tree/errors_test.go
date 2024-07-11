@@ -35,6 +35,7 @@ func TestAllKindsOfErrors(t *testing.T) {
 					"bad_field": {Value: "foo"},
 				},
 			},
+			"another_nested": {Value: "string_value_for_struct"},
 			"badmap": {
 				Children: map[string]*Node{
 					"0": {Value: "foo"},
@@ -97,6 +98,11 @@ func TestAllKindsOfErrors(t *testing.T) {
 			msg:         "unknown field",
 			path:        "nested/bad_field",
 			isPathError: true,
+		},
+		{
+			msg:         "cannot write param: destination should be a primitive type, not a struct",
+			path:        "another_nested",
+			isPathError: false,
 		},
 		{
 			msg:         "can only write to maps with string keys",
