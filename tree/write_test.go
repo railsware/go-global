@@ -27,6 +27,7 @@ type testStructType struct {
 	NestedSlicePtr []*testStructType          `json:"nsliceptr"`
 	SliceOfMap     []map[string]string        `json:"sliceofmap"`
 	MapOfSlice     map[string][]string        `json:"mapofslice"`
+	Unmarshalable  unmarshalableType          `json:"unmarshalable"`
 	// Fields just for testing errors
 	Complex64 complex64      `global:"complex"`
 	BadMap    map[int]string `json:"badmap"`
@@ -34,6 +35,15 @@ type testStructType struct {
 
 type nestedType struct {
 	NestedField string `json:"nested_field"`
+}
+
+type unmarshalableType struct {
+	value string
+}
+
+func (u *unmarshalableType) UnmarshalText(text []byte) error {
+	u.value = string(text)
+	return nil
 }
 
 // TODO: maybe split the test into atomic parts so it's not so hard to review
@@ -139,11 +149,12 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 					},
 				},
 			},
+			"unmarshalable": {Value: "unmarshaled_value"},
 		},
 	}
 
 	errors := tree.Write(reflect.ValueOf(&testStruct))
-	require.False(t, errors.Present())
+	require.False(t, errors.Present(), "had errors: %v", errors.Join())
 
 	expectedStruct := testStructType{
 		Str:   "foo",
@@ -178,6 +189,7 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 		NestedSlicePtr: []*testStructType{{Str: "nested_foo_in_slice_ptr"}},
 		SliceOfMap:     []map[string]string{{"foo": "map_in_slice"}},
 		MapOfSlice:     map[string][]string{"foo": {"slice_in_map"}},
+		Unmarshalable:  unmarshalableType{value: "unmarshaled_value"},
 	}
 
 	assert.Equal(t, expectedStruct, testStruct, "assignment works correctly")
@@ -328,6 +340,7 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 		NestedSlicePtr: []*testStructType{{Str: "updated_foo_in_slice_ptr"}},
 		SliceOfMap:     []map[string]string{{"foo": "updated_map_in_slice"}},
 		MapOfSlice:     map[string][]string{"foo": {"updated_slice_in_map"}},
+		Unmarshalable:  unmarshalableType{value: "unmarshaled_value"},
 	}
 
 	assert.Equal(t, expectedMergedStruct, testStruct, "merging changes works correctly")

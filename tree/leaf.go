@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -9,6 +10,11 @@ import (
 func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors { //nolint:cyclop
 	if !destination.CanSet() {
 		return newWriteErrors("value is not writable")
+	}
+
+	// If destination implements TextUnmarshaler, it takes priority
+	if handled, unmarshalerErrors := tryWriteUnmarshaler(paramTree.Value, destination); handled {
+		return unmarshalerErrors
 	}
 
 	switch destination.Kind() { //nolint:exhaustive // we don't cover all types
@@ -70,6 +76,32 @@ func writeBool(source string, destination reflect.Value) WriteErrors {
 		destination.SetBool(false)
 	default:
 		return newWriteErrors("cannot read bool param value (must be true or false)")
+	}
+	return WriteErrors{}
+}
+
+func tryWriteUnmarshaler(source string, destination reflect.Value) (bool, WriteErrors) {
+	if destination.CanInterface() {
+		if unmarshaler, ok := destination.Interface().(encoding.TextUnmarshaler); ok {
+			return true, writeUnmarshaler(source, unmarshaler)
+		}
+	}
+
+	// In some cases unmarshaling requires a pointer receiver. So if the value itself does not implement the interface,
+	// check a pointer to it as well.
+	if destination.CanAddr() {
+		if unmarshaler, ok := destination.Addr().Interface().(encoding.TextUnmarshaler); ok {
+			return true, writeUnmarshaler(source, unmarshaler)
+		}
+	}
+
+	return false, WriteErrors{}
+}
+
+func writeUnmarshaler(source string, unmarshaler encoding.TextUnmarshaler) WriteErrors {
+	err := unmarshaler.UnmarshalText([]byte(source))
+	if err != nil {
+		return newWriteErrors(fmt.Sprintf("cannot write param: UnmarshalText returned error: %v", err))
 	}
 	return WriteErrors{}
 }
