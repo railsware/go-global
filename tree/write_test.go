@@ -28,6 +28,7 @@ type testStructType struct {
 	SliceOfMap     []map[string]string        `json:"sliceofmap"`
 	MapOfSlice     map[string][]string        `json:"mapofslice"`
 	Unmarshalable  unmarshalableType          `json:"unmarshalable"`
+	Bytes          []byte                     `json:"bytes"`
 	// Fields just for testing errors
 	Complex64 complex64      `global:"complex"`
 	BadMap    map[int]string `json:"badmap"`
@@ -150,6 +151,7 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 				},
 			},
 			"unmarshalable": {Value: "unmarshaled_value"},
+			"bytes":         {Value: "ZGF0YQ=="},
 		},
 	}
 
@@ -190,6 +192,7 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 		SliceOfMap:     []map[string]string{{"foo": "map_in_slice"}},
 		MapOfSlice:     map[string][]string{"foo": {"slice_in_map"}},
 		Unmarshalable:  unmarshalableType{value: "unmarshaled_value"},
+		Bytes:          []byte{'d', 'a', 't', 'a'},
 	}
 
 	assert.Equal(t, expectedStruct, testStruct, "assignment works correctly")
@@ -341,6 +344,7 @@ func TestWrite(t *testing.T) { //nolint:maintidx
 		SliceOfMap:     []map[string]string{{"foo": "updated_map_in_slice"}},
 		MapOfSlice:     map[string][]string{"foo": {"updated_slice_in_map"}},
 		Unmarshalable:  unmarshalableType{value: "unmarshaled_value"},
+		Bytes:          []byte{'d', 'a', 't', 'a'},
 	}
 
 	assert.Equal(t, expectedMergedStruct, testStruct, "merging changes works correctly")

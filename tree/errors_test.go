@@ -41,6 +41,7 @@ func TestAllKindsOfErrors(t *testing.T) {
 					"0": {Value: "foo"},
 				},
 			},
+			"bytes": {Value: "??notbase64"},
 		},
 	}
 
@@ -107,6 +108,11 @@ func TestAllKindsOfErrors(t *testing.T) {
 		{
 			msg:         "can only write to maps with string keys",
 			path:        "badmap",
+			isPathError: false,
+		},
+		{
+			msg:         "could not decode base64: illegal base64 data at input byte 0",
+			path:        "bytes",
 			isPathError: false,
 		},
 	}

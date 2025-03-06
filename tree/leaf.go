@@ -2,6 +2,7 @@ package tree
 
 import (
 	"encoding"
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -34,6 +35,9 @@ func (paramTree Node) writeLeafValue(destination reflect.Value) WriteErrors { //
 	case reflect.Map:
 		return newWriteErrors("cannot write param: destination should be a primitive type, not a map")
 	case reflect.Slice:
+		if destination.Type().Elem().Kind() == reflect.Uint8 {
+			return writeBase64(paramTree.Value, destination)
+		}
 		return newWriteErrors("cannot write param: destination should be a primitive type, not a slice")
 	default:
 		err := fmt.Sprintf("cannot write param: config key is of unsupported type %s", destination.Kind())
@@ -77,6 +81,15 @@ func writeBool(source string, destination reflect.Value) WriteErrors {
 	default:
 		return newWriteErrors("cannot read bool param value (must be true or false)")
 	}
+	return WriteErrors{}
+}
+
+func writeBase64(source string, destination reflect.Value) WriteErrors {
+	bytes, err := base64.StdEncoding.DecodeString(source)
+	if err != nil {
+		return newWriteErrors(fmt.Sprintf("could not decode base64: %v", err))
+	}
+	destination.SetBytes(bytes)
 	return WriteErrors{}
 }
 
