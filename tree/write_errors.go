@@ -45,6 +45,10 @@ func (we *WriteErrors) mergeChildErrors(childName string, childErrors WriteError
 }
 
 func (we *WriteErrors) Join() global.Error {
+	if !we.Present() {
+		return nil
+	}
+
 	msgs := make([]string, 0, len(we.errors))
 	isWarning := true
 	for _, err := range we.errors {

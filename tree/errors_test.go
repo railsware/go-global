@@ -144,6 +144,14 @@ func TestJoinWarnings(t *testing.T) {
 	assert.True(t, mergedError.Warning())
 }
 
+func TestJoinNoErrors(t *testing.T) {
+	t.Parallel()
+
+	errors := WriteErrors{}
+
+	assert.Nil(t, errors.Join())
+}
+
 func TestJoinErrors(t *testing.T) {
 	t.Parallel()
 
