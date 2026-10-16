@@ -1,0 +1,23 @@
+aws/aws_param_store.go
+  s_28578c3e1d3bed::t_b5abf8b43b5d70 70-72
+tree/errors_test.go
+  s_28578c3e1d3bed::t_d2ac770cdd9dd1 147-154
+tree/write_errors.go
+  s_28578c3e1d3bed::t_b23257c44f13e0 48-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4676ced1af36b26a143d74869f1c0d0a8cb9ab9",
+  "prompts": {},
+  "sessions": {
+    "s_28578c3e1d3bed": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d33422e2-db76-415e-b33b-c46e3d0a7278",
+        "model": "auto-smart"
+      },
+      "human_author": "Leonid Shevtsov <leonid@shevtsov.me>"
+    }
+  }
+}
