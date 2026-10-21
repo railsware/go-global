@@ -67,6 +67,9 @@ func LoadConfigFromParameterStore( //nolint:nonamedreturns // false positive, us
 	errors := paramTree.Write(reflectedConfig)
 
 	joinedError := errors.Join()
+	if joinedError == nil {
+		return nil
+	}
 
 	if joinedError.Warning() && options.IgnoreUnmappedParams {
 		return nil
